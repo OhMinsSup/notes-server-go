@@ -1,35 +1,142 @@
 package core
 
+import (
+	"path/filepath"
+	"time"
+
+	"github.com/OhMinsSup/notes-server-go/daos"
+	"github.com/OhMinsSup/notes-server-go/tools/config"
+	"github.com/OhMinsSup/notes-server-go/tools/hook"
+	"xorm.io/xorm"
+)
+
 const (
 	DefaultDataMaxOpenConns int = 120
 	DefaultDataMaxIdleConns int = 20
-	DefaultLogsMaxOpenConns int = 10
-	DefaultLogsMaxIdleConns int = 2
-
-	LocalStorageDirName string = "storage"
-	LocalBackupsDirName string = "backups"
-	LocalTempDirName    string = ".pb_temp_to_delete" // temp pb_data sub directory that will be deleted on each app.Bootstrap()
 )
 
 var _ App = (*BaseApp)(nil)
 
 type BaseApp struct {
 	// configurable parameters
-	isDebug          bool
-	dataDir          string
-	encryptionEnv    string
+	config           *config.Configuration
 	dataMaxOpenConns int
 	dataMaxIdleConns int
-	logsMaxOpenConns int
-	logsMaxIdleConns int
+
+	// internals
+	dao *daos.Dao
+
+	// app event hooks
+	onBeforeBootstrap *hook.Hook[*BootstrapEvent]
+	onAfterBootstrap  *hook.Hook[*BootstrapEvent]
+	onBeforeServe     *hook.Hook[*ServeEvent]
+	onBeforeApiError  *hook.Hook[*ApiErrorEvent]
+	onAfterApiError   *hook.Hook[*ApiErrorEvent]
 }
 
-func NewBaseApp() *BaseApp {
-	return &BaseApp{}
+type BaseAppConfig struct {
+	// configurable parameters
+	config           *config.Configuration
+	DataMaxOpenConns int // default to 500
+	DataMaxIdleConns int // default 20
 }
 
-func (app *BaseApp) DB() {}
+func NewBaseApp(config *BaseAppConfig) *BaseApp {
+	app := &BaseApp{
+		config:           config.config,
+		dataMaxOpenConns: config.DataMaxOpenConns,
+		dataMaxIdleConns: config.DataMaxIdleConns,
 
-func (app *BaseApp) initLogsDB() error {}
+		// app event hooks
+		onBeforeBootstrap: &hook.Hook[*BootstrapEvent]{},
+		onAfterBootstrap:  &hook.Hook[*BootstrapEvent]{},
+		onBeforeServe:     &hook.Hook[*ServeEvent]{},
+		onBeforeApiError:  &hook.Hook[*ApiErrorEvent]{},
+		onAfterApiError:   &hook.Hook[*ApiErrorEvent]{},
+	}
+	return app
+}
 
-func (app *BaseApp) initDataDB() error {}
+func (app *BaseApp) Bootstrap() error {
+	event := &BootstrapEvent{app}
+
+	if err := app.OnBeforeBootstrap().Trigger(event); err != nil {
+		return err
+	}
+
+	// clear resources of previous core state (if any)
+	if err := app.ResetBootstrapState(); err != nil {
+		return err
+	}
+
+	if err := app.initDataDB(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (app *BaseApp) initDataDB() error {
+	maxOpenConns := DefaultDataMaxOpenConns
+	maxIdleConns := DefaultDataMaxIdleConns
+	if app.dataMaxOpenConns > 0 {
+		maxOpenConns = app.dataMaxOpenConns
+	}
+	if app.dataMaxIdleConns > 0 {
+		maxIdleConns = app.dataMaxIdleConns
+	}
+
+	db, err := connectDB(filepath.Join(app.DataURL()))
+	if err != nil {
+		return err
+	}
+	db.SetMaxOpenConns(maxOpenConns)
+	db.SetMaxIdleConns(maxIdleConns)
+	db.SetConnMaxLifetime(5 * time.Minute)
+
+	app.dao = app.createDao(db)
+
+	return nil
+}
+
+func (app *BaseApp) ResetBootstrapState() error {
+	return nil
+}
+
+func (app *BaseApp) createDao(db *xorm.Engine) *daos.Dao {
+	dao := daos.New(db)
+	return dao
+}
+
+// -------------------------------------------------------------------
+// App event hooks
+// -------------------------------------------------------------------
+
+func (app *BaseApp) OnBeforeBootstrap() *hook.Hook[*BootstrapEvent] {
+	return app.onBeforeBootstrap
+}
+
+func (app *BaseApp) OnAfterBootstrap() *hook.Hook[*BootstrapEvent] {
+	return app.onAfterBootstrap
+}
+
+func (app *BaseApp) OnBeforeServe() *hook.Hook[*ServeEvent] {
+	return app.onBeforeServe
+}
+
+func (app *BaseApp) OnBeforeApiError() *hook.Hook[*ApiErrorEvent] {
+	return app.onBeforeApiError
+}
+
+func (app *BaseApp) OnAfterApiError() *hook.Hook[*ApiErrorEvent] {
+	return app.onAfterApiError
+}
+
+// -------------------------------------------------------------------
+
+func (app *BaseApp) DataURL() string {
+	return app.config.DBConfigString
+}
+
+func (app *BaseApp) IsDebug() bool {
+	return app.config.IsDebug
+}
