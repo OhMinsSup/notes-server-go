@@ -34,4 +34,8 @@ type App interface {
 	// response to the client.
 	// It could be used to log the final API error in external services.
 	OnAfterApiError() *hook.Hook[*ApiErrorEvent]
+
+	// OnTerminate hook is triggered when the app is in the process
+	// of being terminated (eg. on SIGTERM signal).
+	OnTerminate() *hook.Hook[*TerminateEvent]
 }

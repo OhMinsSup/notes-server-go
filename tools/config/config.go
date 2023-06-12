@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	DefaultServerRoot = "http://localhost:8000"
+	DefaultServerRoot = "localhost:8000"
 	DefaultPort       = 8000
 )
 

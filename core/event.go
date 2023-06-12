@@ -1,12 +1,16 @@
 package core
 
-import "github.com/labstack/echo/v4"
+import "github.com/labstack/echo/v5"
 
 // -------------------------------------------------------------------
 // Serve events data
 // -------------------------------------------------------------------
 
 type BootstrapEvent struct {
+	App App
+}
+
+type TerminateEvent struct {
 	App App
 }
 
