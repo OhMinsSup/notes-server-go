@@ -4,7 +4,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/OhMinsSup/notes-server-go/core"
+	"github.com/OhMinsSup/notes-server-go/apis"
 	"github.com/OhMinsSup/notes-server-go/tools/config"
 	"github.com/OhMinsSup/notes-server-go/tools/serve"
 )
@@ -16,7 +16,7 @@ func main() {
 		log.Fatal("Unable to read the config file: ", err)
 		return
 	}
-	options := &core.BaseAppConfig{
+	options := &apis.BaseAppConfig{
 		Config: config,
 		ServerOptions: &serve.ServeOptions{
 			ShowStartBanner: true,
@@ -31,7 +31,7 @@ func main() {
 		DataMaxOpenConns: 120,
 		DataMaxIdleConns: 10,
 	}
-	bootstrap := core.NewBaseApp(options)
+	bootstrap := apis.NewBaseApp(options)
 
 	err = bootstrap.Bootstrap()
 	if err != nil {

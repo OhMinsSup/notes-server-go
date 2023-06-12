@@ -1,4 +1,4 @@
-package core
+package apis
 
 import "github.com/OhMinsSup/notes-server-go/tools/hook"
 
