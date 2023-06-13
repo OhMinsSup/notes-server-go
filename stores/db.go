@@ -1,4 +1,4 @@
-package apis
+package stores
 
 import (
 	"fmt"
@@ -8,7 +8,7 @@ import (
 )
 
 // connectDB는 데이터베이스에 연결합니다.
-func connectDB(dbPath string) (*xorm.Engine, error) {
+func ConnectDB(dbPath string) (*xorm.Engine, error) {
 	engine, err := xorm.NewEngine("sqlite3", fmt.Sprintf(dbPath))
 	if err != nil {
 		return nil, err

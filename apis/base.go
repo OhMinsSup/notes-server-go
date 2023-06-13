@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/OhMinsSup/notes-server-go/daos"
+	"github.com/OhMinsSup/notes-server-go/stores"
 	"github.com/OhMinsSup/notes-server-go/tools/config"
 	"github.com/OhMinsSup/notes-server-go/tools/hook"
 	"github.com/OhMinsSup/notes-server-go/tools/rest"
@@ -34,7 +34,7 @@ type BaseApp struct {
 	dataMaxIdleConns int
 
 	// internals
-	dao *daos.Dao
+	store *stores.Store
 
 	// app event hooks
 	onBeforeBootstrap *hook.Hook[*BootstrapEvent]
@@ -104,15 +104,16 @@ func (app *BaseApp) initDataDB() error {
 		maxIdleConns = app.dataMaxIdleConns
 	}
 
-	db, err := connectDB(filepath.Join(app.DataURL()))
+	db, err := stores.ConnectDB(filepath.Join(app.DataURL()))
 	if err != nil {
 		return err
 	}
 	db.SetMaxOpenConns(maxOpenConns)
 	db.SetMaxIdleConns(maxIdleConns)
 	db.SetConnMaxLifetime(5 * time.Minute)
+	db.TZLocation, _ = time.LoadLocation("Asia/Seoul")
 
-	app.dao = app.createDao(db)
+	app.store = app.createStore(db)
 
 	return nil
 }
@@ -183,9 +184,9 @@ func (app *BaseApp) ResetBootstrapState() error {
 	return nil
 }
 
-func (app *BaseApp) createDao(db *xorm.Engine) *daos.Dao {
-	dao := daos.New(db)
-	return dao
+func (app *BaseApp) createStore(db *xorm.Engine) *stores.Store {
+	store := stores.New(db)
+	return store
 }
 
 func (app *BaseApp) createRouter() *echo.Echo {
@@ -270,6 +271,7 @@ func (app *BaseApp) createRouter() *echo.Echo {
 	// default routes
 	api := router.Group("/api")
 	bindHealthApi(app, api)
+	bindAuthApi(app, api)
 
 	return router
 
