@@ -1,6 +1,7 @@
 package apis
 
 import (
+	"github.com/OhMinsSup/notes-server-go/services"
 	"github.com/OhMinsSup/notes-server-go/stores"
 	"github.com/OhMinsSup/notes-server-go/tools/hook"
 )
@@ -12,6 +13,7 @@ type App interface {
 	Bootstrap() error
 	ResetBootstrapState() error
 	Store() *stores.Store
+	Service() *services.Service
 
 	// ---------------------------------------------------------------
 	// App event hooks

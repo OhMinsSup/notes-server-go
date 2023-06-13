@@ -3,11 +3,13 @@ package apis
 import (
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/OhMinsSup/notes-server-go/services"
 	"github.com/OhMinsSup/notes-server-go/stores"
 	"github.com/OhMinsSup/notes-server-go/tools/config"
 	"github.com/OhMinsSup/notes-server-go/tools/hook"
@@ -34,7 +36,8 @@ type BaseApp struct {
 	dataMaxIdleConns int
 
 	// internals
-	store *stores.Store
+	store   *stores.Store
+	service *services.Service
 
 	// app event hooks
 	onBeforeBootstrap *hook.Hook[*BootstrapEvent]
@@ -94,6 +97,10 @@ func (app *BaseApp) Bootstrap() error {
 		return err
 	}
 
+	if err := app.initServices(); err != nil {
+		return err
+	}
+
 	if err := app.OnAfterBootstrap().Trigger(event); err != nil && app.IsDebug() {
 		log.Println(err)
 	}
@@ -137,7 +144,8 @@ func (app *BaseApp) initServer() error {
 		mainAddr = app.serverOptions.HttpsAddr
 	}
 
-	// mainHost, _, _ := net.SplitHostPort(mainAddr)
+	mainHost, _, _ := net.SplitHostPort(mainAddr)
+	log.Printf("main host: %s\n", mainHost)
 
 	serverConfig := &http.Server{
 		ReadTimeout:       10 * time.Minute,
@@ -188,8 +196,18 @@ func (app *BaseApp) initServer() error {
 	return serverConfig.ListenAndServe()
 }
 
+func (app *BaseApp) initServices() error {
+	app.service = app.createServices(app.Store())
+	return nil
+}
+
 func (app *BaseApp) ResetBootstrapState() error {
 	return nil
+}
+
+func (app *BaseApp) createServices(store *stores.Store) *services.Service {
+	services := services.New(store)
+	return services
 }
 
 func (app *BaseApp) createStore(db *xorm.Engine) *stores.Store {
@@ -326,6 +344,10 @@ func (app *BaseApp) IsDebug() bool {
 // Dao returns the default app Dao instance.
 func (app *BaseApp) Store() *stores.Store {
 	return app.store
+}
+
+func (app *BaseApp) Service() *services.Service {
+	return app.service
 }
 
 func (app *BaseApp) registerDefaultHooks() {
