@@ -13,5 +13,8 @@ func ConnectDB(dbPath string) (*xorm.Engine, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	defer engine.Close()
+
 	return engine, nil
 }

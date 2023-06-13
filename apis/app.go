@@ -1,6 +1,9 @@
 package apis
 
-import "github.com/OhMinsSup/notes-server-go/tools/hook"
+import (
+	"github.com/OhMinsSup/notes-server-go/stores"
+	"github.com/OhMinsSup/notes-server-go/tools/hook"
+)
 
 // App은 기본 인터페이스를 정의합니다.
 type App interface {
@@ -8,6 +11,7 @@ type App interface {
 	IsDebug() bool
 	Bootstrap() error
 	ResetBootstrapState() error
+	Store() *stores.Store
 
 	// ---------------------------------------------------------------
 	// App event hooks

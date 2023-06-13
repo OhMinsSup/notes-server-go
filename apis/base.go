@@ -68,6 +68,9 @@ func NewBaseApp(config *BaseAppConfig) *BaseApp {
 		onAfterApiError:   &hook.Hook[*ApiErrorEvent]{},
 		onTerminate:       &hook.Hook[*TerminateEvent]{},
 	}
+
+	app.registerDefaultHooks()
+
 	return app
 }
 
@@ -91,6 +94,10 @@ func (app *BaseApp) Bootstrap() error {
 		return err
 	}
 
+	if err := app.OnAfterBootstrap().Trigger(event); err != nil && app.IsDebug() {
+		log.Println(err)
+	}
+
 	return nil
 }
 
@@ -108,6 +115,7 @@ func (app *BaseApp) initDataDB() error {
 	if err != nil {
 		return err
 	}
+	db.ShowSQL(app.IsDebug())
 	db.SetMaxOpenConns(maxOpenConns)
 	db.SetMaxIdleConns(maxIdleConns)
 	db.SetConnMaxLifetime(5 * time.Minute)
@@ -313,4 +321,17 @@ func (app *BaseApp) DataURL() string {
 
 func (app *BaseApp) IsDebug() bool {
 	return app.config.IsDebug
+}
+
+// Dao returns the default app Dao instance.
+func (app *BaseApp) Store() *stores.Store {
+	return app.store
+}
+
+func (app *BaseApp) registerDefaultHooks() {
+	app.OnTerminate().Add(func(e *TerminateEvent) error {
+		log.Println("Terminating the application...")
+		app.ResetBootstrapState()
+		return nil
+	})
 }

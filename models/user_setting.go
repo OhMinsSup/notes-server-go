@@ -2,8 +2,8 @@ package models
 
 type UserSetting struct {
 	BaseModelLogicalDel `xorm:"extends"`
-	UserId              int64 `xorm:"index"`
-	PrivateTweet        bool  `xorm:"notnull default false"`
+	UserId              int64 `json:"user_id" xorm:"index"`
+	PrivateTweet        bool  `json:"private_tweet" xorm:"notnull default false"`
 }
 
 func (UserSetting) TableName() string {
