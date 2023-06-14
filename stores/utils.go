@@ -1,6 +1,9 @@
 package stores
 
 import (
+	"database/sql"
+	"log"
+
 	sq "github.com/Masterminds/squirrel"
 	"github.com/OhMinsSup/notes-server-go/tools/errors"
 )
@@ -27,4 +30,10 @@ func (s *Store) GetSchemaName() (string, error) {
 		return "", err
 	}
 	return result, nil
+}
+
+func (s *Store) CloseRows(rows *sql.Rows) {
+	if err := rows.Close(); err != nil {
+		log.Println("error closing row set", err)
+	}
 }

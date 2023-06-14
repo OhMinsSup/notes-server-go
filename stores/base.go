@@ -69,7 +69,6 @@ func (s *Store) getQueryBuilder(db sq.BaseRunner) sq.StatementBuilderType {
 	return builder.RunWith(db)
 }
 
-
 func (s *Store) computeBinaryParam() (bool, error) {
 	if s.dbType != PostgresDBType {
 		return false, nil

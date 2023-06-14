@@ -1,10 +1,8 @@
 package models
 
-import "time"
-
 type BaseModelLogicalDel struct {
-	Id        int64      `json:"id"`
-	CreatedAt time.Time  `json:"created_at" xorm:"created"`
-	UpdatedAt time.Time  `json:"update_at" xorm:"updated"`
-	DeletedAt *time.Time `json:"delete_at" xorm:"deleted"`
+	Id        int64 `json:"id"`
+	CreatedAt int64 `json:"created_at"`
+	UpdatedAt int64 `json:"update_at"`
+	DeletedAt int64 `json:"delete_at"`
 }
