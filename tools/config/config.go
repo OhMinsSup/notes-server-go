@@ -8,13 +8,18 @@ import (
 const (
 	DefaultServerRoot = "localhost:8000"
 	DefaultPort       = 8000
+	DBType 		  = "sqlite3"
+	DBConfigString    = "./database.sqlite"
+	DBTablePrefix     = ""
 )
 
 type Configuration struct {
 	ServerRoot     string `json:"serverRoot" mapstructure:"serverRoot"`
 	Port           int    `json:"port" mapstructure:"port"`
+	DBType         string `json:"dbtype" mapstructure:"dbtype"`
 	DBConfigString string `json:"dbconfig" mapstructure:"dbconfig"`
-	IsDebug          bool   `json:"isDebug" mapstructure:"isDebug"`
+	DBTablePrefix  string `json:"dbtableprefix" mapstructure:"dbtableprefix"`
+	IsDebug        bool   `json:"isDebug" mapstructure:"isDebug"`
 }
 
 // ReadConfigFile reads the configuration file and returns the configuration.
@@ -27,7 +32,9 @@ func ReadConfigFile(configFilePath string) (*Configuration, error) {
 
 	viper.SetDefault("ServerRoot", DefaultServerRoot)
 	viper.SetDefault("Port", DefaultPort)
-	viper.SetDefault("DBConfigString", "./database.sqlite")
+	viper.SetDefault("DBType", DBType)
+	viper.SetDefault("DBConfigString", DBConfigString)
+	viper.SetDefault("DBTablePrefix", DBTablePrefix)
 
 	err := viper.ReadInConfig() // Find and read the config file
 	if err != nil {             // Handle errors reading the config file
@@ -42,7 +49,7 @@ func ReadConfigFile(configFilePath string) (*Configuration, error) {
 	}
 
 	regular := color.New()
-	regular.Printf(" ➜ RreadConfigFile: %+v", removeSecurityData(configuration))
+	regular.Printf(" ➜ RreadConfigFile: %+v\n", removeSecurityData(configuration))
 
 	return &configuration, nil
 }

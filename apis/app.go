@@ -8,7 +8,6 @@ import (
 
 // App은 기본 인터페이스를 정의합니다.
 type App interface {
-	DataURL() string
 	IsDebug() bool
 	Bootstrap() error
 	ResetBootstrapState() error

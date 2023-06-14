@@ -1,6 +1,7 @@
 package apis
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"net"
@@ -18,7 +19,6 @@ import (
 	"github.com/fatih/color"
 	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/middleware"
-	"xorm.io/xorm"
 )
 
 const (
@@ -109,27 +109,20 @@ func (app *BaseApp) Bootstrap() error {
 }
 
 func (app *BaseApp) initDataDB() error {
-	maxOpenConns := DefaultDataMaxOpenConns
-	maxIdleConns := DefaultDataMaxIdleConns
-	if app.dataMaxOpenConns > 0 {
-		maxOpenConns = app.dataMaxOpenConns
-	}
-	if app.dataMaxIdleConns > 0 {
-		maxIdleConns = app.dataMaxIdleConns
-	}
-
-	db, err := stores.ConnectDB(filepath.Join(app.DataURL()))
+	store, err := app.createStore()
 	if err != nil {
 		return err
 	}
-	db.ShowSQL(app.IsDebug())
-	db.SetMaxOpenConns(maxOpenConns)
-	db.SetMaxIdleConns(maxIdleConns)
-	db.SetConnMaxLifetime(5 * time.Minute)
-	db.TZLocation, _ = time.LoadLocation("Asia/Seoul")
 
-	app.store = app.createStore(db)
-
+	app.store = store
+	date := new(strings.Builder)
+	log.New(date, "", log.LstdFlags).Print()
+	bold := color.New(color.Bold).Add(color.FgGreen)
+	bold.Printf(
+		"%s Database Connection started at %s\n",
+		strings.TrimSpace(date.String()),
+		color.CyanString("%s", app.config.DBType),
+	)
 	return nil
 }
 
@@ -210,9 +203,29 @@ func (app *BaseApp) createServices(store *stores.Store) *services.Service {
 	return services
 }
 
-func (app *BaseApp) createStore(db *xorm.Engine) *stores.Store {
-	store := stores.New(db)
-	return store
+func (app *BaseApp) createStore() (*stores.Store, error) {
+	connectionURL := filepath.Join(app.config.DBConfigString)
+	db, err := sql.Open(app.config.DBType, connectionURL)
+	if err != nil {
+		return nil, err
+	}
+
+	err = db.Ping()
+	if err != nil {
+		return nil, err
+	}
+
+	var store *stores.Store
+	params := stores.Params{
+		DBType:           app.config.DBType,
+		ConnectionString: connectionURL,
+		DB:               db,
+	}
+	store, err = stores.New(params)
+	if err != nil {
+		return nil, err
+	}
+	return store, nil
 }
 
 func (app *BaseApp) createRouter() *echo.Echo {
@@ -332,10 +345,6 @@ func (app *BaseApp) OnTerminate() *hook.Hook[*TerminateEvent] {
 }
 
 // -------------------------------------------------------------------
-
-func (app *BaseApp) DataURL() string {
-	return app.config.DBConfigString
-}
 
 func (app *BaseApp) IsDebug() bool {
 	return app.config.IsDebug
