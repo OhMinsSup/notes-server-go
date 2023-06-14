@@ -8,9 +8,10 @@ import (
 const (
 	DefaultServerRoot = "localhost:8000"
 	DefaultPort       = 8000
-	DBType 		  = "sqlite3"
+	DBType            = "sqlite3"
 	DBConfigString    = "./database.sqlite"
 	DBTablePrefix     = ""
+	ConfigFilePath    = "./config.json"
 )
 
 type Configuration struct {
@@ -25,7 +26,7 @@ type Configuration struct {
 // ReadConfigFile reads the configuration file and returns the configuration.
 func ReadConfigFile(configFilePath string) (*Configuration, error) {
 	if configFilePath == "" {
-		viper.SetConfigFile("./config.json")
+		viper.SetConfigFile(ConfigFilePath)
 	} else {
 		viper.SetConfigFile(configFilePath)
 	}

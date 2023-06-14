@@ -38,6 +38,5 @@ func main() {
 		log.Fatal("Unable to bootstrap the application: ", err)
 		return
 	}
-
 	log.Panicln("Application terminated")
 }
