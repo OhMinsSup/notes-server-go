@@ -20,6 +20,10 @@
 # Go workspace file
 go.work
 
-#
+# db
 *.sqlite
 *.db
+*.db-journal
+
+# prisma
+*_gen.go

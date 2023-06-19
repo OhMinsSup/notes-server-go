@@ -1,15 +1,15 @@
 package apis
 
 import (
-	"database/sql"
+	"context"
 	"fmt"
 	"log"
 	"net"
 	"net/http"
-	"path/filepath"
 	"strings"
 	"time"
 
+	sqlstore "github.com/OhMinsSup/notes-server-go"
 	"github.com/OhMinsSup/notes-server-go/stores"
 	"github.com/OhMinsSup/notes-server-go/tools/config"
 	"github.com/OhMinsSup/notes-server-go/tools/hook"
@@ -35,7 +35,7 @@ type BaseApp struct {
 	dataMaxIdleConns int
 
 	// internals
-	store   *stores.Store
+	store *stores.Store
 
 	// app event hooks
 	onBeforeBootstrap *hook.Hook[*BootstrapEvent]
@@ -113,9 +113,8 @@ func (app *BaseApp) initDataDB() error {
 	log.New(date, "", log.LstdFlags).Print()
 	bold := color.New(color.Bold).Add(color.FgGreen)
 	bold.Printf(
-		"%s Database Connection started at %s\n",
+		"%s Database Connection started\n",
 		strings.TrimSpace(date.String()),
-		color.CyanString("%s", app.config.DBType),
 	)
 	return nil
 }
@@ -188,27 +187,24 @@ func (app *BaseApp) ResetBootstrapState() error {
 }
 
 func (app *BaseApp) createStore() (*stores.Store, error) {
-	connectionURL := filepath.Join(app.config.DBConfigString)
-	db, err := sql.Open(app.config.DBType, connectionURL)
-	if err != nil {
+	client := sqlstore.NewClient()
+	if err := client.Prisma.Connect(); err != nil {
 		return nil, err
 	}
 
-	err = db.Ping()
-	if err != nil {
-		return nil, err
-	}
+	ctx := context.Background()
 
 	var store *stores.Store
 	params := stores.Params{
-		DBType:           app.config.DBType,
-		ConnectionString: connectionURL,
-		DB:               db,
+		DB:  client,
+		Ctx: ctx,
 	}
-	store, err = stores.New(params)
+
+	store, err := stores.New(params)
 	if err != nil {
 		return nil, err
 	}
+
 	return store, nil
 }
 

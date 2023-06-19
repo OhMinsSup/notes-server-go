@@ -38,5 +38,13 @@ func main() {
 		log.Fatal("Unable to bootstrap the application: ", err)
 		return
 	}
+
+	defer func() {
+		if err := bootstrap.Store().Close(); err != nil {
+			log.Fatal("Unable to close the store: ", err)
+			panic(err)
+		}
+	}()
+
 	log.Panicln("Application terminated")
 }

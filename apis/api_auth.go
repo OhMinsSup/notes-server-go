@@ -38,8 +38,19 @@ func (api *authApi) signup(c echo.Context) error {
 	}
 
 	store := api.app.Store()
-	user, exists := store.GetUserByEmail(form.Email)
-	log.Println("exists", exists, user)
+	user, err := store.GetUserByEmailOrUsername(form.Email, form.Username)
+	if err != nil {
+		return NewBadRequestError("Failed to get user.", err)
+	}
+
+	if user != nil {
+		return NewBadRequestError(
+			"User already exists.",
+			nil,
+		)
+	}
+
+	log.Println(user)
 
 	resp := new(signinResponse)
 	resp.Code = http.StatusOK
