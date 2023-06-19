@@ -6,7 +6,7 @@ import (
 )
 
 type User struct {
-	BaseModelLogicalDel `xorm:"extends"`
+	BaseModelLogicalDel
 	Email               string `json:"email"`
 	Username            string `json:"username"`
 	Password            string `json:"password"`

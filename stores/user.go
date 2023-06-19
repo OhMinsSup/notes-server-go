@@ -8,26 +8,16 @@ import (
 	"github.com/OhMinsSup/notes-server-go/models"
 )
 
-func (s *Store) createUser(db sq.BaseRunner, user *models.User) (*models.User, error) {
-	now := time.Now().UnixNano()
-	user.CreatedAt = now
-	user.UpdatedAt = now
-	user.DeletedAt = 0
-
-	query := s.getQueryBuilder(db).Insert(s.tablePrefix+"users").
-		Columns("id", "username", "email", "password", "salt", "create_at", "update_at", "delete_at").
-		Values(user.Id, user.Username, user.Email, user.Password, "", user.CreatedAt, user.UpdatedAt, user.DeletedAt)
-
-	_, err := query.Exec()
-	return user, err
+func (s *Store) GetUserByEmail(email string) (*models.User, error) {
+	return s.getUserByCondition(s.db, sq.Eq{"email": email})
 }
 
-func (s *Store) getUserByEmail(db sq.BaseRunner, email string) (*models.User, error) {
-	return s.getUserByCondition(db, sq.Eq{"email": email})
+func (s *Store) GetUserByUsername(username string) (*models.User, error) {
+	return s.getUserByCondition(s.db, sq.Eq{"username": username})
 }
 
-func (s *Store) getUserByUsername(db sq.BaseRunner, username string) (*models.User, error) {
-	return s.getUserByCondition(db, sq.Eq{"username": username})
+func (s *Store) CreateUser(user *models.User) (*models.User, error) {
+	return s.createUser(s.db, user)
 }
 
 func (s *Store) getUserByCondition(db sq.BaseRunner, condition sq.Eq) (*models.User, error) {
@@ -77,6 +67,20 @@ func (s *Store) getUsersByCondition(db sq.BaseRunner, condition interface{}, lim
 
 	return users, nil
 
+}
+
+func (s *Store) createUser(db sq.BaseRunner, user *models.User) (*models.User, error) {
+	now := time.Now().UnixNano()
+	user.CreatedAt = now
+	user.UpdatedAt = now
+	user.DeletedAt = 0
+
+	query := s.getQueryBuilder(db).Insert(s.tablePrefix+"users").
+		Columns("id", "username", "email", "password", "salt", "create_at", "update_at", "delete_at").
+		Values(user.Id, user.Username, user.Email, user.Password, user.Salt, user.CreatedAt, user.UpdatedAt, user.DeletedAt)
+
+	_, err := query.Exec()
+	return user, err
 }
 
 func (s *Store) usersFromRows(rows *sql.Rows) ([]*models.User, error) {

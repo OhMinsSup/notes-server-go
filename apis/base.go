@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/OhMinsSup/notes-server-go/services"
 	"github.com/OhMinsSup/notes-server-go/stores"
 	"github.com/OhMinsSup/notes-server-go/tools/config"
 	"github.com/OhMinsSup/notes-server-go/tools/hook"
@@ -37,7 +36,6 @@ type BaseApp struct {
 
 	// internals
 	store   *stores.Store
-	service *services.Service
 
 	// app event hooks
 	onBeforeBootstrap *hook.Hook[*BootstrapEvent]
@@ -94,10 +92,6 @@ func (app *BaseApp) Bootstrap() error {
 	}
 
 	if err := app.initServer(); err != nil {
-		return err
-	}
-
-	if err := app.initServices(); err != nil {
 		return err
 	}
 
@@ -189,18 +183,8 @@ func (app *BaseApp) initServer() error {
 	return serverConfig.ListenAndServe()
 }
 
-func (app *BaseApp) initServices() error {
-	app.service = app.createServices(app.Store())
-	return nil
-}
-
 func (app *BaseApp) ResetBootstrapState() error {
 	return nil
-}
-
-func (app *BaseApp) createServices(store *stores.Store) *services.Service {
-	services := services.New(store)
-	return services
 }
 
 func (app *BaseApp) createStore() (*stores.Store, error) {
@@ -353,10 +337,6 @@ func (app *BaseApp) IsDebug() bool {
 // Dao returns the default app Dao instance.
 func (app *BaseApp) Store() *stores.Store {
 	return app.store
-}
-
-func (app *BaseApp) Service() *services.Service {
-	return app.service
 }
 
 func (app *BaseApp) registerDefaultHooks() {
