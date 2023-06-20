@@ -64,6 +64,14 @@ func NewUnauthorizedError(message string, data any) *ApiError {
 	return NewApiError(http.StatusUnauthorized, message, data)
 }
 
+func NewInternalServerError(message string, data any) *ApiError {
+	if message == "" {
+		message = "Something went wrong while processing your request."
+	}
+
+	return NewApiError(http.StatusInternalServerError, message, data)
+}
+
 // NewApiError creates and returns new normalized `ApiError` instance.
 func NewApiError(status int, message string, data any) *ApiError {
 	message = inflector.Sentenize(message)

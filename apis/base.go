@@ -10,6 +10,7 @@ import (
 	"time"
 
 	sqlstore "github.com/OhMinsSup/notes-server-go"
+	"github.com/OhMinsSup/notes-server-go/settings"
 	"github.com/OhMinsSup/notes-server-go/stores"
 	"github.com/OhMinsSup/notes-server-go/tools/config"
 	"github.com/OhMinsSup/notes-server-go/tools/hook"
@@ -35,7 +36,8 @@ type BaseApp struct {
 	dataMaxIdleConns int
 
 	// internals
-	store *stores.Store
+	store    *stores.Store
+	settings *settings.Settings
 
 	// app event hooks
 	onBeforeBootstrap *hook.Hook[*BootstrapEvent]
@@ -60,6 +62,7 @@ func NewBaseApp(config *BaseAppConfig) *BaseApp {
 		serverOptions:    config.ServerOptions,
 		dataMaxOpenConns: config.DataMaxOpenConns,
 		dataMaxIdleConns: config.DataMaxIdleConns,
+		settings:         settings.New(),
 
 		// app event hooks
 		onBeforeBootstrap: &hook.Hook[*BootstrapEvent]{},
@@ -341,4 +344,9 @@ func (app *BaseApp) registerDefaultHooks() {
 		app.ResetBootstrapState()
 		return nil
 	})
+}
+
+// Settings returns the loaded app settings.
+func (app *BaseApp) Settings() *settings.Settings {
+	return app.settings
 }
