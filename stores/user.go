@@ -21,6 +21,20 @@ func (s *Store) GetUserByEmailOrUsername(email string, username string) (*sqlsto
 	return user, nil
 }
 
+func (s *Store) GetUserByEmail(email string) (*sqlstore.UserModel, error) {
+	prisma := s.db
+
+	user, err := prisma.User.FindFirst(
+		sqlstore.User.Email.Equals(email),
+	).Exec(s.ctx)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return user, nil
+}
+
 type CreateUserParams struct {
 	Email        string
 	Username     string

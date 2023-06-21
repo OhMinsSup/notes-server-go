@@ -14,6 +14,7 @@ func bindAuthApi(app App, rg *echo.Group) {
 
 	subGroup := rg.Group("/auth")
 	subGroup.POST("/signup", api.signup)
+	subGroup.POST("/signin", api.signin)
 }
 
 type authApi struct {
@@ -24,7 +25,49 @@ type signinResponse struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
 	Data    struct {
+		UserId int    `json:"userId"`
+		Token  string `json:"token"`
 	} `json:"data"`
+}
+
+type signinForm struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+func (api *authApi) signin(c echo.Context) error {
+	form := new(signinForm)
+	if err := c.Bind(form); err != nil {
+		return NewBadRequestError("Invalid form data.", err)
+	}
+
+	store := api.app.Store()
+	user, err := store.GetUserByEmail(form.Email)
+	if err != nil {
+		return NewNotFoundError("User not found.", err)
+	}
+
+	if !security.ComparePassword(user.PasswordHash, form.Password) {
+		type Data struct {
+			Key string `json:"key"`
+		}
+		var data Data
+		data.Key = "password"
+		return NewBadRequestError("Invalid password.", data)
+	}
+
+	token, tokenErr := tokens.NewRecordAuthToken(user.ID, api.app.Settings().RecordAuthToken.Secret, api.app.Settings().RecordAuthToken.Duration)
+	if tokenErr != nil {
+		return NewBadRequestError("Failed to auth token.", tokenErr)
+	}
+
+	resp := new(signinResponse)
+	resp.Code = http.StatusOK
+	resp.Message = "Success"
+	resp.Data.UserId = user.ID
+	resp.Data.Token = token
+
+	return c.JSON(http.StatusOK, resp)
 }
 
 type signupResponse struct {
