@@ -62,7 +62,7 @@ func NewBaseApp(config *BaseAppConfig) *BaseApp {
 		serverOptions:    config.ServerOptions,
 		dataMaxOpenConns: config.DataMaxOpenConns,
 		dataMaxIdleConns: config.DataMaxIdleConns,
-		settings:         settings.New(),
+		settings:         settings.New(config.Config),
 
 		// app event hooks
 		onBeforeBootstrap: &hook.Hook[*BootstrapEvent]{},

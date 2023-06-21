@@ -11,7 +11,6 @@ import (
 
 func main() {
 	config, err := config.ReadConfigFile("./config.json")
-	log.Println("config: ", config)
 	if err != nil {
 		log.Fatal("Unable to read the config file: ", err)
 		return

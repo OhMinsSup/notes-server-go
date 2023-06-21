@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"sync"
 
-	"github.com/OhMinsSup/notes-server-go/tools/security"
+	"github.com/OhMinsSup/notes-server-go/tools/config"
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 )
 
@@ -22,13 +22,13 @@ type Settings struct {
 }
 
 // New creates and returns a new default Settings instance.
-func New() *Settings {
+func New(config *config.Configuration) *Settings {
 	return &Settings{
 		Logs: LogsConfig{
 			MaxDays: 5,
 		},
 		RecordAuthToken: TokenConfig{
-			Secret:   security.RandomString(50),
+			Secret:   config.RecordAuthTokenSecret,
 			Duration: 1209600, // 14 days
 		},
 	}

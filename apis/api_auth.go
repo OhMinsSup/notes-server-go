@@ -106,7 +106,7 @@ func (api *authApi) signup(c echo.Context) error {
 
 	resp := new(signupResponse)
 	resp.Code = http.StatusOK
-	resp.Message = "API is healthy."
+	resp.Message = "Success"
 	resp.Data.UserId = user.ID
 	resp.Data.Token = token
 
