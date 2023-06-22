@@ -237,6 +237,7 @@ func (app *BaseApp) createRouter() *echo.Echo {
 	}))
 	router.Use(middleware.Recover())
 	router.Use(middleware.Secure())
+	router.Use(LoadAuthContext(app))
 
 	// custom error handler
 	router.HTTPErrorHandler = func(c echo.Context, err error) {
@@ -336,6 +337,10 @@ func (app *BaseApp) IsDebug() bool {
 // Dao returns the default app Dao instance.
 func (app *BaseApp) Store() *stores.Store {
 	return app.store
+}
+
+func (app *BaseApp) Config() *config.Configuration {
+	return app.config
 }
 
 func (app *BaseApp) registerDefaultHooks() {

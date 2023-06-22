@@ -10,6 +10,7 @@ const (
 	DefaultPort           = 8000
 	ConfigFilePath        = "./config.json"
 	RecordAuthTokenSecret = "1a2b3c4d5e6f7g8h9i1a2b3c4d5e6f7g8h9i1a2b3c4d5e6f7g8h9i"
+	TokenName             = "notes.access_token"
 )
 
 type Configuration struct {
@@ -17,6 +18,7 @@ type Configuration struct {
 	Port                  int    `json:"port" mapstructure:"port"`
 	IsDebug               bool   `json:"isDebug" mapstructure:"isDebug"`
 	RecordAuthTokenSecret string `json:"recordAuthTokenSecret" mapstructure:"recordAuthTokenSecret"`
+	TokenName             string `json:"tokenName" mapstructure:"tokenName"`
 }
 
 // ReadConfigFile reads the configuration file and returns the configuration.
@@ -31,6 +33,7 @@ func ReadConfigFile(configFilePath string) (*Configuration, error) {
 	viper.SetDefault("Port", DefaultPort)
 	viper.SetDefault("IsDebug", true)
 	viper.SetDefault("RecordAuthTokenSecret", RecordAuthTokenSecret)
+	viper.SetDefault("TokenName", TokenName)
 
 	err := viper.ReadInConfig() // Find and read the config file
 	if err != nil {             // Handle errors reading the config file

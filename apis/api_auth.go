@@ -2,6 +2,7 @@ package apis
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/OhMinsSup/notes-server-go/stores"
 	"github.com/OhMinsSup/notes-server-go/tools/security"
@@ -66,6 +67,15 @@ func (api *authApi) signin(c echo.Context) error {
 	resp.Message = "Success"
 	resp.Data.UserId = user.ID
 	resp.Data.Token = token
+
+	cookie := new(http.Cookie)
+	cookie.Name = api.app.Config().TokenName
+	cookie.Value = token
+	cookie.Path = "/"
+	cookie.HttpOnly = true
+	// 14 days
+	cookie.Expires = time.Now().Add(14 * 24 * time.Hour)
+	c.SetCookie(cookie)
 
 	return c.JSON(http.StatusOK, resp)
 }
@@ -152,6 +162,15 @@ func (api *authApi) signup(c echo.Context) error {
 	resp.Message = "Success"
 	resp.Data.UserId = user.ID
 	resp.Data.Token = token
+
+	cookie := new(http.Cookie)
+	cookie.Name = api.app.Config().TokenName
+	cookie.Value = token
+	cookie.Path = "/"
+	cookie.HttpOnly = true
+	// 14 days
+	cookie.Expires = time.Now().Add(14 * 24 * time.Hour)
+	c.SetCookie(cookie)
 
 	return c.JSON(http.StatusOK, resp)
 }

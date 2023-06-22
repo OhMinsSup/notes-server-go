@@ -3,6 +3,7 @@ package apis
 import (
 	"github.com/OhMinsSup/notes-server-go/settings"
 	"github.com/OhMinsSup/notes-server-go/stores"
+	"github.com/OhMinsSup/notes-server-go/tools/config"
 	"github.com/OhMinsSup/notes-server-go/tools/hook"
 )
 
@@ -13,6 +14,7 @@ type App interface {
 	ResetBootstrapState() error
 	Store() *stores.Store
 	Settings() *settings.Settings
+	Config() *config.Configuration
 
 	// ---------------------------------------------------------------
 	// App event hooks
