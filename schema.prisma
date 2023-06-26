@@ -25,6 +25,7 @@ model User {
     UserSetting  UserSetting?
     UserAccount  UserAccount?
     UserSocial   UserSocial?
+    Tweets       Tweet[]
 
     @@map(name: "users")
 }
@@ -77,4 +78,33 @@ model UserSocial {
     User      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
     @@map(name: "user_socials")
+}
+
+model Tweet {
+    id        Int          @id @default(autoincrement())
+    userId    Int
+    user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+    text      String
+    createdAt DateTime     @default(now()) // 생성일
+    updatedAt DateTime     @updatedAt // 업데이트일
+    deletedAt DateTime? // 삭제일
+    Medias    TweetMedia[]
+
+    @@map("tweets")
+}
+
+model TweetMedia {
+    id           Int       @id @default(autoincrement())
+    filename     String
+    path         String
+    mediaType    String
+    categoryType String
+    createdAt    DateTime  @default(now()) // 생성일
+    updatedAt    DateTime  @updatedAt // 업데이트일
+    deletedAt    DateTime? // 삭제일
+    Tweet        Tweet?    @relation(fields: [tweetId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+    tweetId      Int?
+
+    @@index([tweetId], name: "tweet_media_tweet_id")
+    @@map("tweet_media")
 }
