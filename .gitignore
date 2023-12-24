@@ -27,3 +27,4 @@ go.work
 
 # prisma
 *_gen.go
+migrations/**/*

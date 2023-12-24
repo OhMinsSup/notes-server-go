@@ -10,9 +10,10 @@ import (
 
 // ApiError defines the struct for a basic api error response.
 type ApiError struct {
-	Code    int            `json:"code"`
-	Message string         `json:"message"`
-	Data    map[string]any `json:"data"`
+	Code       int            `json:"code"`
+	ResultCode int            `json:"resultCode"`
+	Message    string         `json:"message"`
+	Result     map[string]any `json:"result"`
 
 	// stores unformatted error data (could be an internal error, text, etc.)
 	rawData any
@@ -83,10 +84,11 @@ func NewApiError(status int, message string, data any) *ApiError {
 	}
 
 	return &ApiError{
-		rawData: data,
-		Data:    formattedData,
-		Code:    status,
-		Message: strings.TrimSpace(message),
+		rawData:    data,
+		Result:     formattedData,
+		ResultCode: -1,
+		Code:       status,
+		Message:    strings.TrimSpace(message),
 	}
 }
 

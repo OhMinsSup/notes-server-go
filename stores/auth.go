@@ -1,8 +1,6 @@
 package stores
 
 import (
-	"log"
-
 	sqlstore "github.com/OhMinsSup/notes-server-go"
 	"github.com/OhMinsSup/notes-server-go/tools/security"
 	"github.com/spf13/cast"
@@ -15,11 +13,11 @@ func (s *Store) FindAuthRecordByToken(token string, baseTokenKey string) (*sqlst
 		return nil, err
 	}
 
-	log.Println("??", unverifiedClaims)
 	// check required claims
 	var id = unverifiedClaims["id"]
 
-	idx := cast.ToInt(id)
+	// idx := cast.ToInt(id)
+	idx := cast.ToString(id)
 
 	prisma := s.db
 

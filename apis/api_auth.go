@@ -8,6 +8,7 @@ import (
 	"github.com/OhMinsSup/notes-server-go/tools/security"
 	"github.com/OhMinsSup/notes-server-go/tools/tokens"
 	"github.com/labstack/echo/v5"
+	"github.com/spf13/cast"
 )
 
 func bindAuthApi(app App, rg *echo.Group) {
@@ -18,17 +19,23 @@ func bindAuthApi(app App, rg *echo.Group) {
 	subGroup.POST("/signin", api.signin)
 }
 
+type existsError struct {
+	Exists bool   `json:"exists"`
+	Key    string `json:"key"`
+}
+
 type authApi struct {
 	app App
 }
 
 type signinResponse struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
-	Data    struct {
-		UserId int    `json:"userId"`
-		Token  string `json:"token"`
-	} `json:"data"`
+	Code       int    `json:"code"`
+	ResultCode int    `json:"resultCode"`
+	Message    string `json:"message"`
+	Result     struct {
+		UserId    string `json:"userId"`
+		AuthToken string `json:"authToken"`
+	} `json:"result"`
 }
 
 type signinForm struct {
@@ -48,7 +55,12 @@ func (api *authApi) signin(c echo.Context) error {
 		return NewNotFoundError("User not found.", err)
 	}
 
-	if !security.ComparePassword(user.PasswordHash, form.Password) {
+	userPassword, _ := user.UserPassword()
+	if userPassword == nil {
+		return NewInternalServerError("Failed to get user password.", err)
+	}
+
+	if !security.ComparePassword(userPassword.PasswordHash, form.Password) {
 		type Data struct {
 			Key string `json:"key"`
 		}
@@ -64,9 +76,10 @@ func (api *authApi) signin(c echo.Context) error {
 
 	resp := new(signinResponse)
 	resp.Code = http.StatusOK
+	resp.ResultCode = http.StatusOK
 	resp.Message = "Success"
-	resp.Data.UserId = user.ID
-	resp.Data.Token = token
+	resp.Result.UserId = user.ID
+	resp.Result.AuthToken = token
 
 	cookie := new(http.Cookie)
 	cookie.Name = api.app.Config().TokenName
@@ -81,18 +94,20 @@ func (api *authApi) signin(c echo.Context) error {
 }
 
 type signupResponse struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
-	Data    struct {
-		UserId int    `json:"userId"`
-		Token  string `json:"token"`
-	} `json:"data"`
+	Code       int    `json:"code"`
+	ResultCode int    `json:"resultCode"`
+	Message    string `json:"message"`
+	Result     struct {
+		UserId    string `json:"userId"`
+		AuthToken string `json:"authToken"`
+	} `json:"result"`
 }
 
 type signupForm struct {
 	Email    string `json:"email"`
 	Username string `json:"username"`
 	Password string `json:"password"`
+	Nickname string `json:"nickname"`
 }
 
 func (api *authApi) signup(c echo.Context) error {
@@ -102,15 +117,10 @@ func (api *authApi) signup(c echo.Context) error {
 	}
 
 	store := api.app.Store()
-	user, _ := store.GetUserByEmailOrUsername(form.Email, form.Username)
+	user, _ := store.GetUserByEmail(form.Email)
 	if user != nil {
-		type Data struct {
-			Exists bool   `json:"exists"`
-			Key    string `json:"key"`
-		}
-
 		if user.Email == form.Email {
-			var data Data
+			var data existsError
 			data.Exists = true
 			data.Key = "email"
 			return NewBadRequestError(
@@ -118,8 +128,12 @@ func (api *authApi) signup(c echo.Context) error {
 				data,
 			)
 		}
-		if user.Username == form.Username {
-			var data Data
+	}
+
+	profile, _ := store.GetUserByUsername(form.Username)
+	if profile != nil {
+		if profile.Username == form.Username {
+			var data existsError
 			data.Exists = true
 			data.Key = "username"
 			return NewBadRequestError(
@@ -127,13 +141,6 @@ func (api *authApi) signup(c echo.Context) error {
 				data,
 			)
 		}
-		var data Data
-		data.Exists = true
-		data.Key = "user"
-		return NewBadRequestError(
-			"User already exists.",
-			data,
-		)
 	}
 
 	hash, err := security.HashPassword(form.Password)
@@ -144,7 +151,9 @@ func (api *authApi) signup(c echo.Context) error {
 	data := stores.CreateUserParams{
 		Email:        form.Email,
 		Username:     form.Username,
+		Nickname:     form.Nickname,
 		PasswordHash: hash,
+		Salt:         cast.ToString(security.PasswordHashStrength),
 	}
 
 	user, err = store.CreateUser(&data)
@@ -159,9 +168,10 @@ func (api *authApi) signup(c echo.Context) error {
 
 	resp := new(signupResponse)
 	resp.Code = http.StatusOK
+	resp.ResultCode = http.StatusOK
 	resp.Message = "Success"
-	resp.Data.UserId = user.ID
-	resp.Data.Token = token
+	resp.Result.UserId = user.ID
+	resp.Result.AuthToken = token
 
 	cookie := new(http.Cookie)
 	cookie.Name = api.app.Config().TokenName

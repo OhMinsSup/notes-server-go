@@ -6,7 +6,7 @@ import (
 )
 
 // NewRecordAuthToken generates and returns a new auth record authentication token.
-func NewRecordAuthToken(userId int, secret string, duration int64) (string, error) {
+func NewRecordAuthToken(userId string, secret string, duration int64) (string, error) {
 	return security.NewToken(
 		jwt.MapClaims{
 			"id":   userId,

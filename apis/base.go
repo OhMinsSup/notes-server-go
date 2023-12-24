@@ -292,7 +292,7 @@ func (app *BaseApp) createRouter() *echo.Echo {
 	}
 
 	// default routes
-	api := router.Group("/api")
+	api := router.Group("/v1")
 	bindHealthApi(app, api)
 	bindAuthApi(app, api)
 
