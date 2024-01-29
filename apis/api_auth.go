@@ -1,10 +1,12 @@
 package apis
 
 import (
+	"errors"
 	"net/http"
 	"time"
 
 	"github.com/OhMinsSup/notes-server-go/stores"
+	api_errors "github.com/OhMinsSup/notes-server-go/tools/errors"
 	"github.com/OhMinsSup/notes-server-go/tools/security"
 	"github.com/OhMinsSup/notes-server-go/tools/tokens"
 	"github.com/labstack/echo/v5"
@@ -17,11 +19,6 @@ func bindAuthApi(app App, rg *echo.Group) {
 	subGroup := rg.Group("/auth")
 	subGroup.POST("/signup", api.signup)
 	subGroup.POST("/signin", api.signin)
-}
-
-type existsError struct {
-	Exists bool   `json:"exists"`
-	Key    string `json:"key"`
 }
 
 type authApi struct {
@@ -49,46 +46,46 @@ func (api *authApi) signin(c echo.Context) error {
 		return NewBadRequestError("Invalid form data.", err)
 	}
 
-	store := api.app.Store()
-	user, err := store.GetUserByEmail(form.Email)
-	if err != nil {
-		return NewNotFoundError("User not found.", err)
-	}
+	// store := api.app.Store()
+	// user, err := store.GetUserByEmail(form.Email)
+	// if err != nil {
+	// 	return NewNotFoundError("User not found.", err)
+	// }
 
-	userPassword, _ := user.UserPassword()
-	if userPassword == nil {
-		return NewInternalServerError("Failed to get user password.", err)
-	}
+	// userPassword, _ := user.UserPassword()
+	// if userPassword == nil {
+	// 	return NewInternalServerError("Failed to get user password.", err)
+	// }
 
-	if !security.ComparePassword(userPassword.PasswordHash, form.Password) {
-		type Data struct {
-			Key string `json:"key"`
-		}
-		var data Data
-		data.Key = "password"
-		return NewBadRequestError("Invalid password.", data)
-	}
+	// if !security.ComparePassword(userPassword.PasswordHash, form.Password) {
+	// 	type Data struct {
+	// 		Key string `json:"key"`
+	// 	}
+	// 	var data Data
+	// 	data.Key = "password"
+	// 	return NewBadRequestError("Invalid password.", data)
+	// }
 
-	token, tokenErr := tokens.NewRecordAuthToken(user.ID, api.app.Settings().RecordAuthToken.Secret, api.app.Settings().RecordAuthToken.Duration)
-	if tokenErr != nil {
-		return NewBadRequestError("Failed to auth token.", tokenErr)
-	}
+	// token, tokenErr := tokens.NewRecordAuthToken(user.ID, api.app.Settings().RecordAuthToken.Secret, api.app.Settings().RecordAuthToken.Duration)
+	// if tokenErr != nil {
+	// 	return NewBadRequestError("Failed to auth token.", tokenErr)
+	// }
 
 	resp := new(signinResponse)
-	resp.Code = http.StatusOK
-	resp.ResultCode = http.StatusOK
-	resp.Message = "Success"
-	resp.Result.UserId = user.ID
-	resp.Result.AuthToken = token
+	// resp.Code = http.StatusOK
+	// resp.ResultCode = http.StatusOK
+	// resp.Message = "Success"
+	// resp.Result.UserId = user.ID
+	// resp.Result.AuthToken = token
 
-	cookie := new(http.Cookie)
-	cookie.Name = api.app.Config().TokenName
-	cookie.Value = token
-	cookie.Path = "/"
-	cookie.HttpOnly = true
-	// 14 days
-	cookie.Expires = time.Now().Add(14 * 24 * time.Hour)
-	c.SetCookie(cookie)
+	// cookie := new(http.Cookie)
+	// cookie.Name = api.app.Config().TokenName
+	// cookie.Value = token
+	// cookie.Path = "/"
+	// cookie.HttpOnly = true
+	// // 14 days
+	// cookie.Expires = time.Now().Add(14 * 24 * time.Hour)
+	// c.SetCookie(cookie)
 
 	return c.JSON(http.StatusOK, resp)
 }
@@ -104,10 +101,11 @@ type signupResponse struct {
 }
 
 type signupForm struct {
-	Email    string `json:"email"`
-	Username string `json:"username"`
-	Password string `json:"password"`
-	Nickname string `json:"nickname"`
+	Name        string `json:"name"`
+	DisplayName string `json:"displayName"`
+	Role        string `json:"role"`
+	Icon        string `json:"icon"`
+	Password    string `json:"password"`
 }
 
 func (api *authApi) signup(c echo.Context) error {
@@ -117,51 +115,30 @@ func (api *authApi) signup(c echo.Context) error {
 	}
 
 	store := api.app.Store()
-	user, _ := store.GetUserByEmail(form.Email)
-	if user != nil {
-		if user.Email == form.Email {
-			var data existsError
-			data.Exists = true
-			data.Key = "email"
-			return NewBadRequestError(
-				"Email already exists.",
-				data,
-			)
-		}
-	}
-
-	profile, _ := store.GetUserByUsername(form.Username)
-	if profile != nil {
-		if profile.Username == form.Username {
-			var data existsError
-			data.Exists = true
-			data.Key = "username"
-			return NewBadRequestError(
-				"Username already exists.",
-				data,
-			)
-		}
-	}
 
 	hash, err := security.HashPassword(form.Password)
 	if err != nil {
-		return NewInternalServerError("Failed to hash password.", err)
+		return NewBadRequestError("Failed to hash password.", err)
 	}
 
 	data := stores.CreateUserParams{
-		Email:        form.Email,
-		Username:     form.Username,
-		Nickname:     form.Nickname,
+		Name:         form.Name,
+		DisplayName:  form.DisplayName,
+		Role:         form.Role,
+		Icon:         form.Icon,
 		PasswordHash: hash,
 		Salt:         cast.ToString(security.PasswordHashStrength),
 	}
 
-	user, err = store.CreateUser(&data)
+	result, err := store.CreateUser(&data)
 	if err != nil {
+		if errors.Is(err, api_errors.ErrorAlreadyExists) {
+			return NewBadRequestError("User already exists.", err)
+		}
 		return NewInternalServerError("Failed to create user.", err)
 	}
 
-	token, tokenErr := tokens.NewRecordAuthToken(user.ID, api.app.Settings().RecordAuthToken.Secret, api.app.Settings().RecordAuthToken.Duration)
+	token, tokenErr := tokens.NewRecordAuthToken(result.ID, api.app.Settings().RecordAuthToken.Secret, api.app.Settings().RecordAuthToken.Duration)
 	if tokenErr != nil {
 		return NewBadRequestError("Failed to create auth token.", tokenErr)
 	}
@@ -170,7 +147,7 @@ func (api *authApi) signup(c echo.Context) error {
 	resp.Code = http.StatusOK
 	resp.ResultCode = http.StatusOK
 	resp.Message = "Success"
-	resp.Result.UserId = user.ID
+	resp.Result.UserId = result.ID
 	resp.Result.AuthToken = token
 
 	cookie := new(http.Cookie)

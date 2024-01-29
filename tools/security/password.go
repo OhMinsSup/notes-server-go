@@ -9,7 +9,7 @@ var PasswordHashStrength = 10
 // HashPassword generates a hash using the bcrypt.GenerateFromPassword.
 func HashPassword(password string) (string, error) {
 	// salt를 사용하여 bcrypt 해싱
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), PasswordHashStrength)
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return "", err
 	}

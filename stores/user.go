@@ -1,127 +1,122 @@
 package stores
 
 import (
-	"time"
+	"errors"
 
 	sqlstore "github.com/OhMinsSup/notes-server-go"
+	api_errors "github.com/OhMinsSup/notes-server-go/tools/errors"
 )
 
-func (s *Store) GetUserByUsername(username string) (*sqlstore.UserProfileModel, error) {
-	prisma := s.db
+// UserAccountStatus 사용자 계정 상태
+type UserAccountStatus int
 
-	profile, err := prisma.UserProfile.FindUnique(
-		sqlstore.UserProfile.Username.Equals(username),
-	).Exec(s.ctx)
+const (
+	// UserAccountStatusDeactivated 사용자 계정 상태: 동결
+	UserAccountStatusDeactivated UserAccountStatus = 0
+	// UserAccountStatusActive 사용자 계정 상태: 사용
+	UserAccountStatusActive UserAccountStatus = 1
+	// UserAccountStatusSuspended 사용자 계정 상태: 일시중지
+	UserAccountStatusSuspended UserAccountStatus = 2
+)
 
-	if err != nil {
-		return nil, err
-	}
-
-	return profile, nil
+var userAccountStatuses = map[UserAccountStatus]bool{
+	UserAccountStatusDeactivated: true,
+	UserAccountStatusActive:      true,
+	UserAccountStatusSuspended:   true,
 }
 
-func (s *Store) GetUserByEmail(email string) (*sqlstore.UserModel, error) {
-	prisma := s.db
-
-	user, err := prisma.User.FindUnique(
-		sqlstore.User.Email.Equals(email),
-	).With(
-		sqlstore.User.UserPassword.Fetch(),
-	).Exec(s.ctx)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return user, nil
+func (v UserAccountStatus) Valid() bool {
+	return userAccountStatuses[v]
 }
 
-func (s *Store) GetUserById(userId string) (*sqlstore.UserModel, error) {
-	prisma := s.db
-
-	userPassword, err := prisma.User.FindUnique(
-		sqlstore.User.ID.Equals(userId),
-	).With(
-		sqlstore.User.UserPassword.Fetch(),
-	).Exec(s.ctx)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return userPassword, nil
+func (v UserAccountStatus) Int() int {
+	return int(v)
 }
+
+// UserAccountType 사용자 계정 타입
+type UserType int
+
+const (
+	UserTypeHuman UserType = iota
+	UserTypeBot
+	UserTypeWebhook
+)
 
 type CreateUserParams struct {
-	Email        string
-	Username     string
-	Nickname     string
-	PasswordHash string
-	Salt         string
+	Name         string `json:"name"`
+	DisplayName  string `json:"displayName"`
+	Role         string `json:"role"`
+	Icon         string `json:"icon"`
+	PasswordHash string `json:"passwordHash"`
+	Salt         string `json:"salt"`
 }
 
 func (s *Store) CreateUser(data *CreateUserParams) (*sqlstore.UserModel, error) {
-	prisma := s.db
+	client := s.db
 
-	user, err := prisma.User.CreateOne(
-		sqlstore.User.Email.Set(data.Email),
+	exist, err := client.User.FindUnique(
+		sqlstore.User.Name.Equals(data.Name),
 	).Exec(s.ctx)
 
-	if err != nil {
+	if err != nil && !errors.Is(err, sqlstore.ErrNotFound) {
 		return nil, err
 	}
 
-	userId := user.ID
+	if exist != nil {
+		return nil, api_errors.ErrorAlreadyExists
+	}
 
-	if _, err := prisma.UserProfile.CreateOne(
-		sqlstore.UserProfile.Username.Set(data.Username),
-		sqlstore.UserProfile.Nickname.Set(data.Nickname),
-		sqlstore.UserProfile.User.Link(
-			sqlstore.User.ID.Equals(userId),
-		),
-	).Exec(s.ctx); err != nil {
+	txUser := client.User.CreateOne(
+		sqlstore.User.Name.Set(data.Name),
+		sqlstore.User.DisplayName.Set(data.DisplayName),
+		sqlstore.User.Password.Set(data.PasswordHash),
+		sqlstore.User.Salt.Set(data.Salt),
+		sqlstore.User.Icon.Set(data.Icon),
+	).Tx()
+
+	if err := client.Prisma.Transaction(txUser).Exec(s.ctx); err != nil {
 		return nil, err
 	}
 
-	if _, err := prisma.UserSocial.CreateOne(
-		sqlstore.UserSocial.User.Link(
-			sqlstore.User.ID.Equals(userId),
-		),
-	).Exec(s.ctx); err != nil {
+	result := txUser.Result()
+
+	txProfile := client.UserProfile.CreateOne(
+		sqlstore.UserProfile.FkUserID.Set(result.ID),
+	).Tx()
+
+	if err := client.Prisma.Transaction(txProfile).Exec(s.ctx); err != nil {
 		return nil, err
 	}
 
-	if _, err := prisma.UserPassword.CreateOne(
-		sqlstore.UserPassword.PasswordHash.Set(data.PasswordHash),
-		sqlstore.UserPassword.Salt.Set(data.Salt),
-		sqlstore.UserPassword.User.Link(
-			sqlstore.User.ID.Equals(userId),
-		),
-	).Exec(s.ctx); err != nil {
-		return nil, err
-	}
+	return result, nil
 
-	if _, err := prisma.Notification.CreateOne(
-		sqlstore.Notification.Type.Set("WELCOME"),
-		sqlstore.Notification.Message.Set(data.Username+"님, 환영합니다!"),
-		sqlstore.Notification.User.Link(
-			sqlstore.User.ID.Equals(userId),
-		),
-	).Exec(s.ctx); err != nil {
-		return nil, err
-	}
+	// user, err := client.User.CreateOne(
+	// 	sqlstore.User.Name.Set(data.Name),
+	// 	sqlstore.User.DisplayName.Set(data.DisplayName),
+	// 	sqlstore.User.Password.Set(data.PasswordHash),
+	// 	sqlstore.User.Salt.Set(data.Salt),
+	// 	sqlstore.User.Icon.Set(data.Icon),
+	// ).Exec(s.ctx)
 
-	now := time.Now()
-	if _, err := prisma.History.CreateOne(
-		sqlstore.History.Text.Set("Joined Hashnode"),
-		sqlstore.History.ItemType.Set("JOIN_HASHNODE"),
-		sqlstore.History.DateAddedAt.Set(now),
-		sqlstore.History.User.Link(
-			sqlstore.User.ID.Equals(userId),
-		),
-	).Exec(s.ctx); err != nil {
-		return nil, err
-	}
+	// if err != nil {
+	// 	return nil, err
+	// }
 
-	return user, nil
+	// if _, err := client.UserProfile.CreateOne(
+	// 	sqlstore.UserProfile.FkUserID.Set(user.ID),
+	// ).Exec(s.ctx); err != nil {
+	// 	return nil, err
+	// }
+
+	// log.Println("profile", profile.Result())
+
+	// if err := prisma.Prisma.Transaction(user, profile).Exec(s.ctx); err != nil {
+	// 	log.Println(err)
+	// 	return nil, err
+	// }
+
+	// result := user.Result()
+
+	// return result, nil
+	// return user, nil
 }
